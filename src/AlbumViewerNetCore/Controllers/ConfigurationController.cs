@@ -35,10 +35,6 @@ namespace AlbumViewerNetCore.Controllers
         }
 
 
-        /// <summary>
-        /// Returns the application configuration settings
-        /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("api/configuration")]
         public ApplicationConfiguration GetConfiguration()
@@ -47,11 +43,6 @@ namespace AlbumViewerNetCore.Controllers
         }
 
 
-
-        /// <summary>
-        /// Provides information about the running application
-        /// </summary>
-        /// <returns></returns>
 	    [HttpGet("api/applicationstats")]
         public object GetApplicationStats()
         {
@@ -67,12 +58,13 @@ namespace AlbumViewerNetCore.Controllers
             string useSqLite = RawConfiguration["Data:useSqLite"];
 
             // in 3.0 this might work - 2.2: SERIOUSLY????
-            //string runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+            string runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
 
             var stats = new
             {
                 OsPlatform = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
-                AspDotnetVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                AspDotnetVersion = vname + " (" +
+                                   System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToLower() + ")",
                 DataMode = useSqLite == "true" ? "SqLite" : "Sql Server"
             };
 
@@ -81,7 +73,11 @@ namespace AlbumViewerNetCore.Controllers
 
 
         /// <summary>
-        /// Explicit endpoint to handle LetsEncryt certificate requests
+        /// Allow Lets Encrypt Reneawal requests through the pipeline by 
+        /// default these are twarthed because they are treated as extensionless
+        /// action route urls (which have no match and fail).
+        /// 
+        /// Explicitly map a route to the URL and then serve the physical file
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>

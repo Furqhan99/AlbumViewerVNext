@@ -12,19 +12,13 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using AlbumViewerBusiness.Configuration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Westwind.AspNetCore.Security;
 
 
 namespace AlbumViewerAspNetCore
 {
-    /// <summary>
-    /// Token Authentication class
-    ///
-    /// This class uses a manually created bearer token via Authenticate
-    /// that is used to validate each request. If validated the User.Identity
-    /// is updated as appropriate and can be used in [Authorize] access control
-    /// or manual token validation by the APIs in this class.
-    /// </summary>
+    [Authorize()]
     [ServiceFilter(typeof(ApiExceptionFilter))]
     public class AccountController : Controller
     {
@@ -46,12 +40,10 @@ namespace AlbumViewerAspNetCore
 
 
         /// <summary>
-        /// Authenticates a user and returns a service token by username and password
+        /// Token authentication login
         /// </summary>
-        /// <param name="loginUser">A user structure with username and password properties</param>
-        /// <returns>result with token and tokenExpiration properties </returns>
-        /// <response code="200">Authenticated</response>
-        /// <response code="401">Invalid or missing credentials</response>
+        /// <param name="loginUser"></param>
+        /// <returns></returns>
         [AllowAnonymous]
         [HttpPost]
         [Route("api/authenticate")]
@@ -69,6 +61,7 @@ namespace AlbumViewerAspNetCore
             UserState.Name = user.Fullname;
             UserState.Email = user.Username;
 
+
             // create a new token with token helper and add our claim
             var token = JwtHelper.GetJwtToken(
                 user.Username,
@@ -81,21 +74,6 @@ namespace AlbumViewerAspNetCore
                     new Claim("UserState", UserState.ToString())
                 });
 
-            // also add cookie auth for Swagger Access
-            var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme, ClaimTypes.Name, ClaimTypes.Role);
-            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Username));
-            identity.AddClaim(new Claim(ClaimTypes.Name, user.Username));
-            var principal = new ClaimsPrincipal(identity);
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    AllowRefresh = true,
-                    ExpiresUtc = DateTime.UtcNow.AddDays(1)
-                });
-
             return new
             {
                 token = new JwtSecurityTokenHandler().WriteToken(token),
@@ -104,11 +82,7 @@ namespace AlbumViewerAspNetCore
             };
         }
 
-        /// <summary>
-        /// Logs out the current user by immediately expiring the user's
-        /// active token.
-        /// </summary>
-        /// <returns></returns>
+
         [AllowAnonymous]
         [HttpGet]
         [Route("api/logout")]
@@ -123,11 +97,6 @@ namespace AlbumViewerAspNetCore
             return true;
         }
 
-        /// <summary>
-        /// Returns true or false depending on whether user is authenticated.
-        /// </summary>
-        /// <returns></returns>
-        [AllowAnonymous]
         [HttpGet]
         [Route("api/isAuthenticated")]
         public bool IsAuthenthenticated()
@@ -151,13 +120,11 @@ namespace AlbumViewerAspNetCore
         private bool IsTokenExpired()
         {
             string id = ((ClaimsIdentity)User.Identity).Claims.FirstOrDefault(s => s.Type == "jti")?.Value;
-            if (id == null) return false;
-
             if (cancelledTokens.ContainsKey(id))
                 return true;
 
             return false;
-        }   
+        }
 
         private void RemoveExpiredTokens()
         {
@@ -178,7 +145,6 @@ namespace AlbumViewerAspNetCore
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPost]
-        [Obsolete("Left here only for reference. Use Token Authentication instead.")]
         [Route("api/login")]
         public async Task<bool> Login([FromBody] User loginUser)
         {

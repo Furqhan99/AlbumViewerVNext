@@ -1,17 +1,17 @@
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
+WORKDIR /src
 
-MAINTAINER Rick Strahl
+# Copy all files from repo root
+COPY . .
 
-ENV ASPNETCORE_URLS=http://*:80
-ENV ASPNETCORE_ENVIRONMENT=Production
+# Restore using the solution file at root
+RUN dotnet restore AlbumViewerNetCore.sln
 
-# Allow 1433 for SQL Server Access
-EXPOSE 1433
+# Build the solution
+RUN dotnet publish AlbumViewerNetCore.sln -c Release -o /app/publish
 
-WORKDIR /var/www/albumviewer
-
-# copy publish folder contents to web root
-COPY ./bin/Release/net80/publish .
-
-# Run out of Publish Folder
-CMD ["/bin/sh", "-c", "dotnet 'AlbumViewerNetCore.dll'"]
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:5.0
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "AlbumViewerNetCore.dll"]

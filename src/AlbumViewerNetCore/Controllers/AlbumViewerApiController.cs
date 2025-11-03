@@ -6,9 +6,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using System.IO;
 using System.Text;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -53,17 +51,19 @@ namespace AlbumViewerAspNetCore
             HostingEnv = env;
         }
 
+      
 
+
+        [HttpGet]
+        [Route("api/throw")]
+        public object Throw()
+        {
+            throw new InvalidOperationException("This is an unhandled exception");            
+        }
+
+        
         #region albums
 
-        /// <summary>
-        /// A list of albums with detail artist data
-        /// </summary>
-        /// <param name="page"></param>
-        /// <param name="pageSize"></param>
-        /// <returns></returns>
-        /// <response code="200">Album List</response>
-        /// <response code="500">Failed to retrieve albums</response>
         [HttpGet]
         [Route("api/albums")]
         public async Task<IEnumerable<Album>> GetAlbums(int page = -1, int pageSize = 15)
@@ -72,23 +72,12 @@ namespace AlbumViewerAspNetCore
             return await AlbumRepo.GetAllAlbums(page, pageSize);
         }
 
-        /// <summary>
-        /// Returns an individual album
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
         [HttpGet("api/album/{id:int}")]
         public async Task<Album> GetAlbum(int id)
         {
             return await AlbumRepo.Load(id);
         }
 
-        /// <summary>
-        /// Update or add a new album
-        /// </summary>
-        /// <param name="postedAlbum"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpPost("api/album")]
         public async Task<Album> SaveAlbum([FromBody] Album postedAlbum)
         {
@@ -114,13 +103,6 @@ namespace AlbumViewerAspNetCore
             return album;
         }
 
-
-        /// <summary>
-        /// Delete a specific album by id
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpDelete("api/album/{id:int}")]
         public async Task<bool> DeleteAlbum(int id)
         {
@@ -131,12 +113,6 @@ namespace AlbumViewerAspNetCore
         }
 
 
-        /// <summary>
-        /// Delete an album by its album name
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpGet]
         public async Task<string> DeleteAlbumByName(string name)
         {
@@ -163,10 +139,6 @@ namespace AlbumViewerAspNetCore
 
         #region artists
 
-        /// <summary>
-        /// Return a list of Artists
-        /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("api/artists")]
         public async Task<IEnumerable> GetArtists()
@@ -174,12 +146,6 @@ namespace AlbumViewerAspNetCore
             return await ArtistRepo.GetAllArtists();
         }
 
-        /// <summary>
-        /// Return an individual Artist
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpGet("api/artist/{id:int}")]
         public async Task<object> Artist(int id)
         {
@@ -197,12 +163,6 @@ namespace AlbumViewerAspNetCore
             };
         }
 
-        /// <summary>
-        /// Update or add a new Artist
-        /// </summary>
-        /// <param name="artist"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpPost("api/artist")]
         public async Task<ArtistResponse> SaveArtist([FromBody] Artist artist)
         {
@@ -227,11 +187,6 @@ namespace AlbumViewerAspNetCore
             };
         }
 
-        /// <summary>
-        /// Look up an artist by name (search functionality)
-        /// </summary>
-        /// <param name="search"></param>
-        /// <returns></returns>
         [HttpGet("api/artistlookup")]
         public async Task<IEnumerable<object>> ArtistLookup(string search = null)
         {
@@ -243,23 +198,7 @@ namespace AlbumViewerAspNetCore
             return await repo.ArtistLookup(term);
         }
 
-        [HttpGet("api/amievil")]
-        [Authorize]
-        public async Task AmIEvil()
-        {
-            Response.ContentType = "text/html";
-            await Response.WriteAsync("<html>" +
-                                      "<h1>Yes I Am!</h1>" +
-                                      "</html>");
-        }
 
-
-        /// <summary>
-        /// Delete an individual artist by Id
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        /// <exception cref="ApiException"></exception>
         [HttpDelete("api/artist/{id:int}")]
         public async Task<bool> DeleteArtist(int id)
         {
@@ -270,20 +209,6 @@ namespace AlbumViewerAspNetCore
         }
 
         #endregion
-
-        /// <summary>
-        /// Sample endpoint that explicitly raises an exception to
-        /// demonstrate default error results.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        /// <response code="500">Unhandled exception thrown - error response</response>
-        [HttpGet]
-        [Route("api/throw")]
-        public object Throw()
-        {
-            throw new InvalidOperationException("This is an unhandled exception");            
-        }
 
         #region admin
         [HttpGet]
@@ -300,7 +225,7 @@ namespace AlbumViewerAspNetCore
                 {
                     // ExecuteSqlRaw // in EF 3.0
                     context.Database.ExecuteSqlRaw(@"
-drop table Tracks; 
+drop table Tracks;
 drop table Albums;
 drop table Artists;
 drop table Users;
@@ -308,7 +233,7 @@ drop table Users;
                 }
                 else
                 {
-                    // this is not reliable for multiple connections
+                    // this is not reliable for mutliple connections
                     context.Database.CloseConnection();
 
                     try
@@ -317,14 +242,10 @@ drop table Users;
                     }
                     catch
                     {
-                        throw new ApiException("Can't reset data. Existing database is in use.");
+                        throw new ApiException("Can't reset data. Existing database is busy.");
                     }
                 }
 
-            }
-            catch (ApiException)
-            {
-                throw;
             }
             catch { }
 
